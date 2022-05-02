@@ -114,12 +114,13 @@ server <- function(input, output, session){
       df <- read.csv(input$file$datapath) %>% 
         filter(!is.na(datetime)) |> 
         filter(lead(!is.na(SampleNumber)), !is.na(SampleNumber)) %>% 
+        rename(rh = RH.) |> 
         mutate(datetime = ymd_hms(datetime),
                airt = as.numeric(tempC),
-               abs_H = (6.112*exp((17.67*airt)/(airt+243.5))*rh*18.02)/((273.15 +airt)*100*0.08314),
+               abs_H = (6.112*exp((17.67*airt)/(airt+243.5))*rh*18.02)/((273.15+airt)*100*0.08314),
                ppm_H20 = 1358.326542*abs_H,
                co2 = (K30_CO2/(1-(ppm_H20/10^6)))) |> 
-        rename(rh = RH., co2, ch4_smv = CH4smV, ch4_rmv = CH4rmV) %>% 
+        rename(ch4_smv = CH4smV, ch4_rmv = CH4rmV) %>% 
         group_by(datetime) %>% 
         summarise_at(vars(rh, airt, co2, ch4_smv, ch4_rmv), list(mean)) %>% 
         select(datetime, rh, airt, co2, ch4_smv, ch4_rmv)
@@ -239,8 +240,7 @@ server <- function(input, output, session){
     plot(x = data$df$sec,
          y = data$df$co2,
          ylab="CO2 (ppm)", xlab="Seconds",
-         main= "Zoom plot",
-         xaxt="n")
+         main= "Zoom plot")
     
     if (!is.null(ranges2$x)){
       
