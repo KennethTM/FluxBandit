@@ -36,6 +36,8 @@ There are two options for using the app:
 
 2.  Download this repository as a '.zip' file and run in e.g. RStudio. Make sure to have the required packages installed.
 
+Try out the functionality using the two files provided in the 'demo/' folder.
+
 ### Contact
 
 Kenneth Thorø Martinsen (kenneth2810@gmail.com)
