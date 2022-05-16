@@ -39,9 +39,9 @@ ui <- fluidPage(
       
       tags$b("Step 3) Enter metadata"),
       
-      tags$p("Chamber volume (L):"), numericInput("chamber_vol", NULL, 25, min = 0, width = "100px"),
+      tags$p("Chamber volume (L):"), numericInput("chamber_vol", NULL, 280, min = 0, width = "100px"),
       
-      tags$p("Chamber area (m2):"), numericInput("chamber_area", NULL, 0.5, min = 0, width = "100px"),
+      tags$p("Chamber area (m2):"), numericInput("chamber_area", NULL, 0.33, min = 0, width = "100px"),
       
       tags$p("Atmos. pressure (atm):"), numericInput("atm_pres", NULL, 1, min = 0, width = "100px"),
       
@@ -130,7 +130,7 @@ server <- function(input, output, session){
         select(datetime, rh, airt, co2, ch4, water)
     }else if(input$filetype == "LGR"){
       df <- read.csv(input$file$datapath, skip=1) %>% 
-        mutate(datetime = dmy_hms(Time)) %>% 
+        mutate(datetime = dmy_hms(SysTime)) %>% 
         select(datetime, co2 = X.CO2.d_ppm, ch4 = X.CH4.d_ppm, airt = GasT_C, water = X.H2O._ppm)
     }
     
