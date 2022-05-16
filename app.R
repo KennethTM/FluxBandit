@@ -1,6 +1,6 @@
 library(shiny);library(dplyr);library(lubridate)
 
-#FluxBandit-v0.2 
+#FluxBandit-v0.3
 #Shiny app for interactive processing and calculation of greenhouse gas emissions using commercial and DIY type sensor systems
 #Kenneth Thorø Martinsen
 #https://github.com/KennethTM/FluxBandit
