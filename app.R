@@ -5,7 +5,7 @@ library(shiny);library(dplyr);library(lubridate)
 #Kenneth Thorø Martinsen
 #https://github.com/KennethTM/FluxBandit
 
-version <- "FluxBandit-v0.2"
+version <- "FluxBandit-v0.3"
 options(shiny.maxRequestSize=50*1024^2)
 
 ui <- fluidPage(
@@ -24,6 +24,7 @@ ui <- fluidPage(
       
       radioButtons("filetype", "", choices = c("DIY", "LGR"), selected = ""),
       
+      tags$p("Sensor start time (optional, y-m-d h:m:s):"), textInput("time_input", NULL, value="", width = "200px"),
       
       tags$b("2) Upload CSV File"),
       
@@ -114,22 +115,31 @@ server <- function(input, output, session){
       df <- read.csv(input$file$datapath) %>% 
         filter(!is.na(datetime)) |> 
         filter(lead(!is.na(SampleNumber)), !is.na(SampleNumber)) %>% 
-        rename(rh = RH.) |> 
+        rename(rh = RH., ch4_smv=CH4smV) |> 
         mutate(datetime = ymd_hms(datetime),
                airt = as.numeric(tempC),
                abs_H = (6.112*exp((17.67*airt)/(airt+243.5))*rh*18.02)/((273.15+airt)*100*0.08314),
                ppm_H20 = 1358.326542*abs_H,
-               co2 = (K30_CO2/(1-(ppm_H20/10^6)))) |> 
-        rename(ch4_smv = CH4smV, ch4_rmv = CH4rmV) %>% 
+               co2 = (K30_CO2/(1-(ppm_H20/10^6))),
+               V0 = abs_H*5.160442+268.39739,
+               RsR0 = ((5000/ch4_smv)-1)/((5000/V0)-1),
+               ch4 = 19.969879*(RsR0^-1.5626939)+-0.0093223822*abs_H*(19.969879*RsR0^-1.5626939)-15.366139) |> 
+        rename(water = ppm_H20) %>% 
         group_by(datetime) %>% 
-        summarise_at(vars(rh, airt, co2, ch4_smv, ch4_rmv), list(mean)) %>% 
-        select(datetime, rh, airt, co2, ch4_smv, ch4_rmv)
+        summarise_at(vars(rh, airt, co2, ch4, water), list(mean)) %>% 
+        select(datetime, rh, airt, co2, ch4, water)
     }else if(input$filetype == "LGR"){
       df <- read.csv(input$file$datapath, skip=1) %>% 
         mutate(datetime = dmy_hms(Time)) %>% 
-        select(datetime, co2 = X.CO2.d_ppm, ch4 = X.CH4.d_ppm, airt = GasT_C)
+        select(datetime, co2 = X.CO2.d_ppm, ch4 = X.CH4.d_ppm, airt = GasT_C, water = X.H2O._ppm)
     }
     
+    if(input$time_input != ""){
+      time_input <- ymd_hms(input$time_input)
+      time_step <- median(diff(df$datetime))
+      df <- df %>% 
+        mutate(datetime = seq(time_input, by=time_step, length.out = n()))
+    }
     
     time_start <- min(df$datetime)
     time_end <- max(df$datetime)
@@ -149,13 +159,25 @@ server <- function(input, output, session){
     data_subset <- data() %>% 
       filter(between(datetime, input$range[1], input$range[2]))
     
-    y_limits <- quantile(data_subset$co2, c(0.01, 0.99))
+    #y_limits <- quantile(data_subset$co2, c(0.01, 0.99))
     
     plot(x = data_subset$datetime,
          y = data_subset$co2,
          ylab="CO2 (ppm)", xlab="Datetime",
-         main = "Overview plot",
-         ylim = y_limits)
+         main = "Overview plot") #,ylim = y_limits
+    
+    co2_min = min(data_subset$co2)
+    co2_max = max(data_subset$co2)
+    ch4_min = min(data_subset$ch4)
+    ch4_max = max(data_subset$ch4)
+    ch4_scaled = (co2_max - co2_min)*((data_subset$ch4-ch4_min)/(ch4_max - ch4_min))+co2_min
+    
+    ch4_labels = pretty(data_subset$ch4)
+    ch4_at = (co2_max - co2_min)*((ch4_labels-ch4_min)/(ch4_max - ch4_min))+co2_min
+      
+    points(x = data_subset$datetime, y = ch4_scaled, col="coral")
+    axis(4, at = ch4_at, labels = ch4_labels, col="coral", col.ticks="coral")
+    
   })
   
   ranges2 <- reactiveValues(x = NULL, y = NULL)
@@ -170,11 +192,7 @@ server <- function(input, output, session){
         data_subset <- data() %>%
           filter(between(datetime, ranges2$x[1], ranges2$x[2]),
                  between(co2, ranges2$y[1], ranges2$y[2])) %>% 
-          mutate(sec = cumsum(c(0, diff(as.numeric(datetime))))) %>% 
-          mutate(abs_H = (6.112*exp((17.67*airt)/(airt+243.5))*rh*18.02)/((273.15 +airt)*100*0.08314),
-                 V0 = abs_H*5.160442+268.39739,
-                 RsR0 = ((5000/ch4_smv)-1)/((5000/V0)-1),
-                 ch4 = 19.969879*(RsR0^-1.5626939)+-0.0093223822*abs_H*(19.969879*RsR0^-1.5626939)-15.366139)
+          mutate(sec = cumsum(c(0, diff(as.numeric(datetime)))))
       }else if(input$filetype == "LGR"){
         data_subset <- data() %>%
           filter(between(datetime, ranges2$x[1], ranges2$x[2]),
@@ -239,18 +257,42 @@ server <- function(input, output, session){
     
     plot(x = data$df$sec,
          y = data$df$co2,
-         ylab="CO2 (ppm)", xlab="Seconds",
+         ylab="CO2 (ppm)", xlab="",
          main= "Zoom plot")
+    
+    co2_min = min(data$df$co2)
+    co2_max = max(data$df$co2)
+    water_min = min(data$df$water)
+    water_max = max(data$df$water)
+    water_scaled = (co2_max - co2_min)*((data$df$water-water_min)/(water_max - water_min))+co2_min
+    
+    points(x = data$df$sec, y = water_scaled, col="lightblue", type="l")
+    
+    ch4_min = min(data$df$ch4)
+    ch4_max = max(data$df$ch4)
+    ch4_scaled = (co2_max - co2_min)*((data$df$ch4-ch4_min)/(ch4_max - ch4_min))+co2_min
+    
+    ch4_labels = pretty(data$df$ch4)
+    ch4_at = (co2_max - co2_min)*((ch4_labels-ch4_min)/(ch4_max - ch4_min))+co2_min
+    
+    points(x = data$df$sec, y = ch4_scaled, col="coral")
+    axis(4, at = ch4_at, labels = ch4_labels, col="coral", col.ticks="coral")
     
     if (!is.null(ranges2$x)){
       
-      text(x = (max(data$df$sec)-min(data$df$sec))*0.2,
-           y = max(data$df$co2) - 2,
-           labels = data$results_string)
+      title(sub= data$results_string)
       
       abline(data$results$intercept_co2,
              data$results$slope_co2,
-             col = "coral", lwd = 6)
+             col = "black", lwd = 4)
+      
+      lm_model_ch4_scaled <- lm(ch4_scaled~sec, data = data$df)
+      slope_ch4_scaled <- coef(lm_model_ch4_scaled)[2]
+      intercept_ch4_scaled <- coef(lm_model_ch4_scaled)[1]
+      
+      abline(intercept_ch4_scaled,
+             slope_ch4_scaled,
+             col = "coral", lwd = 4)
     }
     
   })
