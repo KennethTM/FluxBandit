@@ -1,11 +1,11 @@
 library(shiny);library(dplyr);library(lubridate)
 
-#FluxBandit-v0.3
+#FluxBandit-v0.4
 #Shiny app for interactive processing and calculation of greenhouse gas emissions using commercial and DIY type sensor systems
 #Kenneth Thorø Martinsen
 #https://github.com/KennethTM/FluxBandit
 
-version <- "FluxBandit-v0.3"
+version <- "FluxBandit-v0.4"
 options(shiny.maxRequestSize=50*1024^2)
 
 ui <- fluidPage(
@@ -24,7 +24,7 @@ ui <- fluidPage(
       
       radioButtons("filetype", "", choices = c("DIY", "LGR"), selected = ""),
       
-      tags$p("Sensor start time (optional, y-m-d h:m:s):"), textInput("time_input", NULL, value="", width = "200px"),
+      tags$p("Optional: Sensor start time (yyyy-mm-dd hh:mm:ss):"), textInput("time_input", NULL, value="", width = "200px"),
       
       tags$b("2) Upload CSV File"),
       
@@ -178,6 +178,8 @@ server <- function(input, output, session){
     points(x = data_subset$datetime, y = ch4_scaled, col="coral")
     axis(4, at = ch4_at, labels = ch4_labels, col="coral", col.ticks="coral")
     
+    legend("topright", c(expression("CO"[2]), expression("CH"[4])), col = c("black", "coral"), pch=19)
+    
   })
   
   ranges2 <- reactiveValues(x = NULL, y = NULL)
@@ -212,20 +214,18 @@ server <- function(input, output, session){
       
       mean_temp <- mean(data_subset$airt)
       
-      results_string <- paste0("CO2: Slope = ", round(slope_co2, 2),
-                               "; R-squared = ", round(r2_co2, 2),
-                               " \n", 
-                               "CH4: Slope = ", round(slope_ch4, 2),
-                               "; R-squared = ", round(r2_ch4, 2))
+      results_string <- paste0("CO2: slope = ", round(slope_co2, 2), " & R-squared = ", round(r2_co2, 2),
+                               "\n", 
+                               "CH4: slope = ", round(slope_ch4, 2), " & R-squared = ", round(r2_ch4, 2))
       
       R <- 0.08206 #L atm K^-1 mol^-1
       
       results <- data.frame("version" = version,
-                            "processing_date" = Sys.time(),
+                            "processing_date" = strftime(Sys.time(), "%Y-%m-%d %H:%M:%S"),
                             "sensor_type" = input$filetype,
                             "id" = as.character(input$sample_id),
-                            "start" = as.character(ranges2$x[1]),
-                            "end" = as.character(ranges2$x[2]),
+                            "start" = strftime(ranges2$x[1], "%Y-%m-%d %H:%M:%S"),
+                            "end" = strftime(ranges2$x[2], "%Y-%m-%d %H:%M:%S"),
                             "slope_co2" = slope_co2,
                             "intercept_co2" = intercept_co2,
                             "r_squared_co2" = r2_co2,
@@ -257,7 +257,7 @@ server <- function(input, output, session){
     
     plot(x = data$df$sec,
          y = data$df$co2,
-         ylab="CO2 (ppm)", xlab="",
+         ylab="CO2 (ppm)", xlab="Time steps",
          main= "Zoom plot")
     
     co2_min = min(data$df$co2)
@@ -294,6 +294,8 @@ server <- function(input, output, session){
              slope_ch4_scaled,
              col = "coral", lwd = 4)
     }
+    
+    legend("topright", c(expression("CO"[2]), expression("CH"[4]), expression("H"[2]*"O")), col = c("black", "coral", "lightblue"), pch=19)
     
   })
   
