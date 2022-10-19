@@ -4,9 +4,9 @@
 
 ### What is it
 
-App used to perform manual processing of greenhouse gas flux measurements using interactive plots of both commercial and DIY type sensor systems.
+App used to perform processing of greenhouse gas flux measurements in chambers using interactive plots. The application supports both commercial (Los Gatos Research - ultraportable/microportable analyzers) and [DIY](https://bg.copernicus.org/articles/17/3659/2020/bg-17-3659-2020.pdf) type sensor systems.
 
-The app takes the user through all the necessary steps:
+The app takes the user through all the necessary steps to calculate CO~2~ and CH~4~ fluxes:
 
 1.  Select sensor type
 
@@ -24,7 +24,7 @@ The app takes the user through all the necessary steps:
 
 5.  Save measurement (repeat steps 2-4)
 
-6.  Download data the results as a ‘.csv’ file
+6.  Download data the results as a '.csv' file
 
 ![](fluxbandit_image.png)
 
@@ -34,13 +34,13 @@ There are two options for using the app:
 
 1.  Run the app [online](https://kennethtm.shinyapps.io/FluxBandit/).
 
-2.  Download this repository as a '.zip' file and run in e.g. RStudio. Make sure to have the required packages installed.
+2.  Download this repository as a '.zip' file and run in e.g. RStudio. Make sure to have the required packages (*shiny*, *dplyr*, and *lubridate*) installed.
 
-Try out the functionality using the two files provided in the 'demo/' folder.
+Try out the functionality using the two example files included in the 'demo/' folder.
 
 ### Release notes
 
-v0.5 - Fixed an error in the flux calculation which resulted in incorrect values for CO2 and CH4 flux in the previous versions.
+v0.5 - Fixed an error in the flux calculation which resulted in incorrect values for CO~2~ and CH~4~ flux in the previous versions.
 
 ### Contact
 
