@@ -38,6 +38,10 @@ There are two options for using the app:
 
 Try out the functionality using the two files provided in the 'demo/' folder.
 
+### Release notes
+
+v0.5 - Fixed an error in the flux calculation which resulted in incorrect values for CO2 and CH4 flux in the previous versions.
+
 ### Contact
 
 Kenneth Thorø Martinsen (kenneth2810@gmail.com)

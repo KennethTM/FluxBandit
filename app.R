@@ -1,11 +1,11 @@
 library(shiny);library(dplyr);library(lubridate)
 
-#FluxBandit-v0.4
+#FluxBandit
 #Shiny app for interactive processing and calculation of greenhouse gas emissions using commercial and DIY type sensor systems
 #Kenneth Thorø Martinsen
 #https://github.com/KennethTM/FluxBandit
 
-version <- "FluxBandit-v0.4"
+version <- "FluxBandit-v0.5"
 options(shiny.maxRequestSize=50*1024^2)
 
 ui <- fluidPage(
@@ -235,8 +235,8 @@ server <- function(input, output, session){
                             "temperature" = mean_temp, 
                             "chamber_vol" = input$chamber_vol,
                             "chamber_area" = input$chamber_area,
-                            "co2_flux_umol_m2_s" = (slope_co2*(input$chamber_vol*input$atm_pres))/(R*(273.15+mean_temp)/input$chamber_area),
-                            "ch4_flux_umol_m2_s" = (slope_ch4*(input$chamber_vol*input$atm_pres))/(R*(273.15+mean_temp)/input$chamber_area)
+                            "co2_flux_umol_m2_s" = (slope_co2*(input$chamber_vol*input$atm_pres))/(R*(273.15+mean_temp)*input$chamber_area),
+                            "ch4_flux_umol_m2_s" = (slope_ch4*(input$chamber_vol*input$atm_pres))/(R*(273.15+mean_temp)*input$chamber_area)
       )
       
     }else{
