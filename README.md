@@ -6,7 +6,7 @@
 
 App used to perform processing of greenhouse gas flux measurements in chambers using interactive plots. The application supports both commercial (Los Gatos Research - ultraportable/microportable analyzers) and [DIY](https://bg.copernicus.org/articles/17/3659/2020/bg-17-3659-2020.pdf) type sensor systems.
 
-The app takes the user through all the necessary steps to calculate CO~2~ and CH~4~ fluxes:
+The app takes the user through all the necessary steps to calculate CO<sub>2</sub> and CH<sub>4</sub> fluxes:
 
 1.  Select sensor type
 
@@ -40,7 +40,7 @@ Try out the functionality using the two example files included in the 'demo/' fo
 
 ### Release notes
 
-v0.5 - Fixed an error in the flux calculation which resulted in incorrect values for CO~2~ and CH~4~ flux in the previous versions.
+v0.5 - Fixed an error in the flux calculation which resulted in incorrect values for CO<sub>2</sub> and CH<sub>4</sub> fluxes in the previous versions.
 
 ### Contact
 
