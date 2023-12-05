@@ -1,12 +1,60 @@
 library(shiny);library(dplyr);library(lubridate)
 
+#install.packages(c("shiny", "dplyr", "lubridate")) if dependencies are missing
+
 #FluxBandit
 #Shiny app for interactive processing and calculation of greenhouse gas emissions using commercial and DIY type sensor systems
 #Kenneth Thorø Martinsen
 #https://github.com/KennethTM/FluxBandit
 
-version <- "FluxBandit-v0.6"
+version <- "FluxBandit-v0.7"
 options(shiny.maxRequestSize=50*1024^2)
+
+#Sensor specific functions for parsing sensor data
+#Function should clean/prepare data for flux calculations and return dataframe with columns:
+#datetime, relative humidity (%), air temperature (celcius), CO2 (ppm), CH4 (ppm) and water (ppm)
+parse_diy <- function(path){
+  df <- read.csv(path) |> 
+    filter(!is.na(datetime)) |> 
+    filter(lead(!is.na(SampleNumber)), !is.na(SampleNumber)) |>
+    rename(rh = RH., ch4_smv=CH4smV) |> 
+    mutate(datetime = ymd_hms(datetime),
+           airt = as.numeric(tempC),
+           abs_H = (6.112*exp((17.67*airt)/(airt+243.5))*rh*18.02)/((273.15+airt)*100*0.08314),
+           ppm_H20 = 1358.326542*abs_H,
+           co2 = (K30_CO2/(1-(ppm_H20/10^6))),
+           V0 = abs_H*5.160442+268.39739,
+           RsR0 = ((5000/ch4_smv)-1)/((5000/V0)-1),
+           ch4 = 19.969879*(RsR0^-1.5626939)+-0.0093223822*abs_H*(19.969879*RsR0^-1.5626939)-15.366139) |> 
+    rename(water = ppm_H20) %>% 
+    group_by(datetime) %>% 
+    summarise_at(vars(rh, airt, co2, ch4, water), list(mean)) |> 
+    select(datetime, rh, airt, co2, ch4, water)
+  
+  return(df)
+}
+
+parse_lgr <- function(path){
+  df <- read.csv(path, skip=1) |> 
+    mutate(datetime = dmy_hms(SysTime)) |> 
+    select(datetime, co2 = X.CO2.d_ppm, ch4 = X.CH4.d_ppm, airt = GasT_C, water = X.H2O._ppm)
+  
+  return(df)
+}
+
+parse_licor <- function(path){
+  df <- read.table(path, skip=7, header=FALSE) |> 
+    mutate(datetime = ymd_hms(paste(V7, V8)),
+           ch4 = V11/1000) |> 
+    select(datetime, water = V9, co2 = V10, ch4, airt = V13) |> 
+    filter(!is.na(co2))
+  
+  return(df)
+}
+
+sensor_parsers <- list("DIY" = parse_diy, 
+                       "LGR" = parse_lgr, 
+                       "LICOR" = parse_licor)
 
 ui <- fluidPage(
   
@@ -22,18 +70,18 @@ ui <- fluidPage(
       
       tags$b("1) Select sensor type"),
       
-      radioButtons("filetype", "", choices = c("DIY", "LGR"), selected = ""),
+      radioButtons("filetype", "", choices = c("DIY", "LGR", "LICOR"), selected = ""),
       
       tags$p("Optional: Sensor start time (yyyy-mm-dd hh:mm:ss):"), textInput("time_input", NULL, value="", width = "200px"),
       
-      tags$b("2) Upload CSV File"),
-      
+      tags$b("2) Upload text file"),
       
       fileInput("file", "",
                 multiple = FALSE,
                 accept = c("text/csv",
-                           "text/comma-separated-values,text/plain",
-                           ".csv")),
+                           "text/comma-separated-values", 
+                           "text/plain",
+                           ".csv", ".txt")),
       
       tags$hr(),
       
@@ -57,7 +105,7 @@ ui <- fluidPage(
       
       tags$hr(),
       
-      tags$b("5) Save flux (repeat)"),
+      tags$b("5) Select and save flux (repeat)"),
       
       tags$br(),
       
@@ -113,35 +161,7 @@ server <- function(input, output, session){
     req(input$file)
     req(input$filetype)
     
-    if(input$filetype == "DIY"){
-      df <- read.csv(input$file$datapath) |> 
-        filter(!is.na(datetime)) |> 
-        filter(lead(!is.na(SampleNumber)), !is.na(SampleNumber)) |>
-        rename(rh = RH., ch4_smv=CH4smV) |> 
-        mutate(datetime = ymd_hms(datetime),
-               airt = as.numeric(tempC),
-               abs_H = (6.112*exp((17.67*airt)/(airt+243.5))*rh*18.02)/((273.15+airt)*100*0.08314),
-               ppm_H20 = 1358.326542*abs_H,
-               co2 = (K30_CO2/(1-(ppm_H20/10^6))),
-               V0 = abs_H*5.160442+268.39739,
-               RsR0 = ((5000/ch4_smv)-1)/((5000/V0)-1),
-               ch4 = 19.969879*(RsR0^-1.5626939)+-0.0093223822*abs_H*(19.969879*RsR0^-1.5626939)-15.366139) |> 
-        rename(water = ppm_H20) %>% 
-        group_by(datetime) %>% 
-        summarise_at(vars(rh, airt, co2, ch4, water), list(mean)) |> 
-        select(datetime, rh, airt, co2, ch4, water)
-    }else if(input$filetype == "LGR"){
-      df <- read.csv(input$file$datapath, skip=1) |> 
-        mutate(datetime = dmy_hms(SysTime)) |> 
-        select(datetime, co2 = X.CO2.d_ppm, ch4 = X.CH4.d_ppm, airt = GasT_C, water = X.H2O._ppm)
-    }
-    
-    if(input$time_input != ""){
-      time_input <- ymd_hms(input$time_input)
-      time_step <- median(diff(df$datetime))
-      df <- df %>% 
-        mutate(datetime = seq(time_input, by=time_step, length.out = n()))
-    }
+    df <- sensor_parsers[[input$filetype]](input$file$datapath)
     
     time_start <- min(df$datetime)
     time_end <- max(df$datetime)
@@ -161,11 +181,15 @@ server <- function(input, output, session){
     data_subset <- data() %>% 
       filter(between(datetime, input$range[1], input$range[2]))
     
+    par(mar = c(5,4,4,4) + 0.1)
+    
     plot(x = data_subset$datetime,
          y = data_subset$co2,
          ylab=expression("CO"[2]*" (ppm)"), 
          xlab="Datetime",
          main = "Overview plot")
+    
+    mtext(expression("CH"[4]*" (ppm)"), side = 4, line = 3, col="coral")
     
     co2_min = min(data_subset$co2)
     co2_max = max(data_subset$co2)
@@ -179,7 +203,8 @@ server <- function(input, output, session){
     points(x = data_subset$datetime, y = ch4_scaled, col="coral")
     axis(4, at = ch4_at, labels = ch4_labels, col="coral", col.ticks="coral")
     
-    legend("topright", c(expression("CO"[2]), expression("CH"[4])), 
+    legend("topright", 
+           c(expression("CO"[2]), expression("CH"[4])), 
            col = c("black", "coral"), pch=19)
     
   })
@@ -257,11 +282,15 @@ server <- function(input, output, session){
     
     data <- data_subset()
     
+    par(mar = c(5,4,4,4) + 0.1)
+    
     plot(x = data$df$sec,
          y = data$df$co2,
          ylab=expression("CO"[2]*" (ppm)"), 
          xlab="Time steps",
          main= "Zoom plot")
+    
+    mtext(expression("CH"[4]*" (ppm)"), side = 4, line = 3, col="coral")
     
     co2_min = min(data$df$co2)
     co2_max = max(data$df$co2)
