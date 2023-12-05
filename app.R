@@ -1,6 +1,7 @@
 library(shiny);library(dplyr);library(lubridate)
 
-#install.packages(c("shiny", "dplyr", "lubridate")) if dependencies are missing
+#Dependencies can be install by calling:
+#install.packages(c("shiny", "dplyr", "lubridate"))
 
 #FluxBandit
 #Shiny app for interactive processing and calculation of greenhouse gas emissions using commercial and DIY type sensor systems
