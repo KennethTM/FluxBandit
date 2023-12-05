@@ -14,6 +14,8 @@ A single page R-script containing a Shiny app to perform processing of greenhous
 
 However, it is easy to extend the functionality. See the 'app.R' file for examples if parser functions for how to add a custom parser.
 
+### Steps
+
 The app takes the user through all the necessary steps to calculate CO<sub>2</sub> and CH<sub>4</sub> fluxes:
 
 1.  Select sensor type
