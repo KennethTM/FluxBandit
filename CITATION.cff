@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Martinsen"
+  given-names: "Kenneth Thorø"
+  orcid: "https://orcid.org/0000-0001-8064-513X" # Optional
+title: "FluxBandit"
+version: v0.7
+doi: 10.5281/zenodo.18758762
+date-released: 2026-02-24
+url: "https://github.com/KennethTM/FluxBandit"
