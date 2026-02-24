@@ -56,6 +56,10 @@ v0.6 - Fixed an error which could result in time zone changes when exporting res
 
 v0.5 - Fixed an error in the flux calculation which resulted in incorrect values for CO<sub>2</sub> and CH<sub>4</sub> fluxes in the previous versions.
 
+### How to cite
+
+[![DOI](https://zenodo.org/badge/487808903.svg)](https://doi.org/10.5281/zenodo.18758762)
+
 ### Contact
 
 Kenneth Thorø Martinsen (kenneth2810@gmail.com)
